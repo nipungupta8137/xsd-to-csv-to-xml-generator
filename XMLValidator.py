@@ -1,9 +1,9 @@
 #! /usr/bin/python  
 #########################################################
-# Date : July 08, 2013  #
-# Fine Name: XMLValidator.py#
-# Description  : Validate XML file against the XSD. #
-# Author   : Nipun Gupta#
+# Date : July 08, 2013                                  #
+# Fine Name: XMLValidator.py                            #
+# Description  : Validate XML file against the XSD.     #
+# Author   : Nipun Gupta                                #
 #########################################################
 
 import lxml 
