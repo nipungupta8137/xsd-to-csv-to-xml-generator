@@ -1,0 +1,13 @@
+shiporder:CT,,,,,,,,,
+orderid:A,orderperson,shipto:CT,,,,,,,
+,,name,address,city,country,item:CT,,,
+,,,,,,title,note,quantity,price
+,,,,,,,,,
+*,*,*,*,*,*,*,*,*,*
+1001,Person1,Person2,Address1,City1,Country1,Title1,Note1,12,12.23
+,,,,,,title2,note2,2,44.12
+,,,,,,title3,note3,23,324.45
+,,Person3,Address2,City2,Country2,Title1,Note1,34,32
+,,Person2,Address1,City1,Country1,Title1,Note1,12,12.23
+,,,,,,title2,note2,2,44.12
+,,,,,,title3,note3,6,324.45
