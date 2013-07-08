@@ -7,11 +7,10 @@
 #   > perl xsd2csv.pl -schema Schema.xsd -csv SampleTest.csv                                  #
 #   2. Once the csv is generated write the test cases manually in the same format.            #
 #   3. Write the XML file based on the csv generated                                          #
-#   > perl xsd2csv.pl -csv SampleTestlink.csv -xml SampleTest.xml -schema Schema.xsd          #
+#   > perl xsd2csv.pl -csv SampleTest.csv -xml SampleTest.xml -schema Schema.xsd              #
 #                                                                                             # 
 #   Result :--> XML file SampleTest.xml is generated which is validated against Schema.xsd.   #                      
 ###############################################################################################
-
 use strict;
 
 our $noOfSchema      = 0;
@@ -29,9 +28,6 @@ our @XMLClosers      = ();
 sub xsd2csvHeader {
     my $line = shift;
     chop($line);
-
-    #   print $line;
-
     # Find the schema
     if ( $line =~ /<xs:schema/ ) {
         if ( $line = !m/\/>/ ) {
@@ -50,13 +46,9 @@ sub xsd2csvHeader {
 
     # Find the element
     if ( $line =~ /<xs:element/ ) {
-
         if ( $line =~ m/name="(.*?)"/ ) {
-
-            # print $row . " $1 \n";
             $csvHeader[$row] .= $1 . ",";
         }
-
         if ( $line = !m/\/>/ ) {
             $selfClose = 1;
         }
@@ -77,8 +69,6 @@ sub xsd2csvHeader {
         $csvHeader[$row] .= ":CT,";    #print ":CT\n";
         $csvHeader[$row] = "," . $csvHeader[$row]
           if ( $csvHeader[$row] =~ m/^\w*\:CT,/ && $row > 0 );
-
-        #        print "\n &&&&& " . $csvHeader[$row];
         $row++;
         if ( $line = !m/\/>/ ) {
             $selfClose = 1;
@@ -96,14 +86,10 @@ sub xsd2csvHeader {
 
     # Find the attribute
     if ( $line =~ /<xs:attribute/ ) {
-
         if ( $line =~ m/name="(.*?)"/ ) {
-
-            # print $1 . ":A";
             $csvHeader[$noOfComplexType] =
               $1 . ":A," . $csvHeader[$noOfComplexType];
         }
-
         if ( $line = !m/\/>/ ) {
             $selfClose = 1;
         }
@@ -117,10 +103,6 @@ sub xsd2csvHeader {
     elsif ( $line =~ m/<\/xs:attribute/ ) {
         $noOfAttributes -= 1;
     }
-
-#    print "\n noOfSchema : noOfElements  : noOfComplexType : noOfAttributes";
-#    print "\n S : E : C : A";
-#    print "\n " . $noOfSchema . " : " . $noOfElements . " : " . $noOfComplexType . " : " . $noOfAttributes . "\n";
 }
 
 sub initialXMLHeader {
@@ -144,15 +126,10 @@ sub finalXMLHeader {
 
 sub closePreviousXMLToken {
     my $checkToken = shift;
-
-    #    print "\n!! $checkToken !!!!\n";
-
     if ( $checkToken ~~ @XMLClosers ) {
         my $closeToken = pop(@XMLClosers);
         $closeToken =~ s/\:.*//g;
         print XMLFILE "\n </" . $closeToken . ">";
-
-        #foreach(@XMLClosers){print "\n ^^^ $closeToken ^^^ " . $_;}
         closePreviousXMLToken($checkToken);
     }
 }
@@ -194,9 +171,6 @@ sub writeXML {
                     }
                 }
             }
-
-#             print "\n" . ($#xmlHeader - $#tokens) . "  :::  <" . $xmlHeader[$i + $#xmlHeader - $#tokens] . ">" . $line . "</" . $xmlHeader[$i + $#xmlHeader - $#tokens] . ">";
-#            print "</" . pop(@XMLClosers) . ">" if($XMLToken !~ "\:");
             $i++;
         }
     }
@@ -210,7 +184,6 @@ while (<FILE>) {
 }
 close(FILE);
 
-#print "\n\n=======================\n";
 if($ARGV[2] eq "-csv"){
 open(FILE,">" . $ARGV[3]);
 foreach (@csvHeader) {
@@ -235,8 +208,6 @@ while (<FILE>) {
     $lineToProcess = $_;
     chop($lineToProcess);
     if ( $lineToProcess =~ m/^\*/ ) { last; }
-
-    #  print $lineToProcess;
     initialXMLHeader($lineToProcess);
 }
 close(FILE);
@@ -258,12 +229,9 @@ while (<FILE>) {
     $lineToProcess = $_;
     chop($lineToProcess);
     if ( $flag == 1 ) {
-        #   print "\n" . $lineToProcess;
         $lineToProcess =~ s/^,+//g;
         writeXML($lineToProcess);
     }
-
-    #print "\n\n\n";
     if ( $lineToProcess =~ m/\*/ ) { $flag = 1; }
 }
 close(FILE);
@@ -271,15 +239,12 @@ close(FILE);
 while ( $#XMLClosers >= 0 ) {
     my $closeToken = pop(@XMLClosers);
     $closeToken =~ s/\:.*//g;
-  #  print "\n </" . $closeToken . ">";
     print XMLFILE "\n </" . $closeToken . ">";
 }
 close(XMLFILE);
 
 open(XMLFILE, $ARGV[3]);
 open(XMLFILE1, ">myxml.xml");
-print XMLFILE1 '<?xml version="1.0" encoding="UTF-8"?>';
-print XMLFILE1 "\n<testcases>";
 while(<XMLFILE>){
     $lineToProcess = $_;
     chomp($lineToProcess);
@@ -289,7 +254,6 @@ while(<XMLFILE>){
     }
     print XMLFILE1 $lineToProcess . "\n";
 }
-print XMLFILE1 "</testcases>";
 close(XMLFILE);
 unlink($ARGV[3]);
 rename("myxml.xml",$ARGV[3])
