@@ -4,12 +4,25 @@
 # Date   : 08-July-2013                                                                       #
 # Description :                                                                               #
 #   1. Given the XSD schema first create the XML header as a cvs file                         #
-#   > perl xsd2csv.pl -schema Schema.xsd -csv SampleTest.csv                                  #
+#   > perl xsd2xml.pl -schema Schema.xsd -csv SampleTest.csv                                  #
 #   2. Once the csv is generated write the test cases manually in the same format.            #
 #   3. Write the XML file based on the csv generated                                          #
-#   > perl xsd2csv.pl -csv SampleTest.csv -xml SampleTest.xml -schema Schema.xsd              #
-#                                                                                             # 
-#   Result :--> XML file SampleTest.xml is generated which is validated against Schema.xsd.   #                      
+#   > perl xsd2xml.pl -csv SampleTest.csv -xml SampleTest.xml -schema Schema.xsd              #
+#                                                                                             #
+#   Result :--> XML file SampleTest.xml is generated which is validated against Schema.xsd.   #
+#                                                                                             #
+#   TODO                                                                                      #
+#   ====                                                                                      #
+#   1. Generalize code for all possible xsd files.                                            #
+#   2. Code optimization and removal of unnecessay code - review                              #
+#                                                                                             #
+#  Revision History                                                                           #
+#  ================                                                                           #
+#                                                                                             #
+#  v1.1 10-July-2013  Code ok for nested xsd files. Attribute are in sequence.                #
+#                                                                                             #
+#                                                                                             #
+#                                                                                             #
 ###############################################################################################
 use strict;
 
@@ -28,6 +41,7 @@ our @XMLClosers      = ();
 sub xsd2csvHeader {
     my $line = shift;
     chop($line);
+
     # Find the schema
     if ( $line =~ /<xs:schema/ ) {
         if ( $line = !m/\/>/ ) {
@@ -87,8 +101,18 @@ sub xsd2csvHeader {
     # Find the attribute
     if ( $line =~ /<xs:attribute/ ) {
         if ( $line =~ m/name="(.*?)"/ ) {
-            $csvHeader[$noOfComplexType] =
-              $1 . ":A," . $csvHeader[$noOfComplexType];
+            print "\n == before ===  " . $csvHeader[$noOfComplexType];
+            my $newAttribuite = $1;
+            if ( $csvHeader[$noOfComplexType] !~ m/:A/ ) {
+                $csvHeader[$noOfComplexType] =
+                  $newAttribuite . ":A," . $csvHeader[$noOfComplexType];
+            }
+            else {
+                $csvHeader[$noOfComplexType] =~
+                  s/(.*:A,)(.*)/$1$newAttribuite:A,$2/;
+            }
+
+            print "\n == after  ===  " . $csvHeader[$noOfComplexType];
         }
         if ( $line = !m/\/>/ ) {
             $selfClose = 1;
@@ -152,14 +176,14 @@ sub writeXML {
             foreach (@XMLTokens) {
                 $XMLToken = $_;
                 if ( $XMLToken =~ m/(.*):A/ ) {
-                    print  XMLFILE " " . $1 . "=\"" . $line . "\"";
+                    print XMLFILE " " . $1 . "=\"" . $line . "\"";
                     $tokenType = 1;
                 }
                 else {
                     if ( $XMLToken =~ m/(.*):CT/ ) {
                         closePreviousXMLToken($XMLToken);
                         push( @XMLClosers, ($XMLToken) );
-                        print  XMLFILE "\n <" . $1 . ">";
+                        print XMLFILE "\n <" . $1 . ">";
                         $tokenType = 2;
                     }
                     else {
@@ -176,88 +200,87 @@ sub writeXML {
     }
 }
 
-if($ARGV[0] eq "-schema"){
-open( FILE, $ARGV[1] );
-while (<FILE>) {
-    $lineToProcess = $_;
-    xsd2csvHeader($lineToProcess);
-}
-close(FILE);
-
-if($ARGV[2] eq "-csv"){
-open(FILE,">" . $ARGV[3]);
-foreach (@csvHeader) {
-    $lineToProcess = $_;
-    my ($number) = ( $lineToProcess =~ tr/,// );
-    for ( ; $number > 1 ; $number-- ) {
-        $addComma .= ",";
+if ( $ARGV[0] eq "-schema" ) {
+    open( FILE, $ARGV[1] );
+    while (<FILE>) {
+        $lineToProcess = $_;
+        xsd2csvHeader($lineToProcess);
     }
-    print $lineToProcess . "\n" . $addComma;
-    print FILE $lineToProcess . "\n" . $addComma;
-}
-$addComma =~ s/,/\*,/g;
-print FILE "\n" . $addComma . "*";
-close(FILE);
-}
+    close(FILE);
+
+    if ( $ARGV[2] eq "-csv" ) {
+        open( FILE, ">" . $ARGV[3] );
+        foreach (@csvHeader) {
+            $lineToProcess = $_;
+            my ($number) = ( $lineToProcess =~ tr/,// );
+            for ( ; $number > 1 ; $number-- ) {
+                $addComma .= ",";
+            }
+            print $lineToProcess . "\n" . $addComma;
+            print FILE $lineToProcess . "\n" . $addComma;
+        }
+        $addComma =~ s/,/\*,/g;
+        print FILE "\n" . $addComma . "*";
+        close(FILE);
+    }
 }
 
 # Part two start here.
-if($ARGV[0] eq "-csv"){
-open( FILE, $ARGV[1] );
-while (<FILE>) {
-    $lineToProcess = $_;
-    chop($lineToProcess);
-    if ( $lineToProcess =~ m/^\*/ ) { last; }
-    initialXMLHeader($lineToProcess);
-}
-close(FILE);
-
-finalXMLHeader();
-
-my $num = 0;
-foreach (@xmlHeader) {
-    print "\n $num : " . $_;
-    $num++;
-}
-
-# Part three creating the XML file with the data here.
-my $flag = 0;
-if($ARGV[2] eq "-xml"){
-open( FILE, $ARGV[1] );
-open(XMLFILE,">" . $ARGV[3]);
-while (<FILE>) {
-    $lineToProcess = $_;
-    chop($lineToProcess);
-    if ( $flag == 1 ) {
-        $lineToProcess =~ s/^,+//g;
-        writeXML($lineToProcess);
+if ( $ARGV[0] eq "-csv" ) {
+    open( FILE, $ARGV[1] );
+    while (<FILE>) {
+        $lineToProcess = $_;
+        chop($lineToProcess);
+        if ( $lineToProcess =~ m/^\*/ ) { last; }
+        initialXMLHeader($lineToProcess);
     }
-    if ( $lineToProcess =~ m/\*/ ) { $flag = 1; }
-}
-close(FILE);
+    close(FILE);
 
-while ( $#XMLClosers >= 0 ) {
-    my $closeToken = pop(@XMLClosers);
-    $closeToken =~ s/\:.*//g;
-    print XMLFILE "\n </" . $closeToken . ">";
-}
-close(XMLFILE);
+    finalXMLHeader();
 
-open(XMLFILE, $ARGV[3]);
-open(XMLFILE1, ">myxml.xml");
-while(<XMLFILE>){
-    $lineToProcess = $_;
-    chomp($lineToProcess);
-    if($lineToProcess =~ m/\"$/){
-        $lineToProcess =~ s/>//g;
-        $lineToProcess .= ">";
+    my $num = 0;
+    foreach (@xmlHeader) {
+        print "\n $num : " . $_;
+        $num++;
     }
-    print XMLFILE1 $lineToProcess . "\n";
-}
-close(XMLFILE);
-unlink($ARGV[3]);
-rename("myxml.xml",$ARGV[3])
-}
-system("python XMLValidator.py " . $ARGV[3] . " " . $ARGV[5] . "");
-}
 
+    # Part three creating the XML file with the data here.
+    my $flag = 0;
+    if ( $ARGV[2] eq "-xml" ) {
+        open( FILE,    $ARGV[1] );
+        open( XMLFILE, ">" . $ARGV[3] );
+        while (<FILE>) {
+            $lineToProcess = $_;
+            chop($lineToProcess);
+            if ( $flag == 1 ) {
+                $lineToProcess =~ s/^,+//g;
+                writeXML($lineToProcess);
+            }
+            if ( $lineToProcess =~ m/\*/ ) { $flag = 1; }
+        }
+        close(FILE);
+
+        while ( $#XMLClosers >= 0 ) {
+            my $closeToken = pop(@XMLClosers);
+            $closeToken =~ s/\:.*//g;
+            print XMLFILE "\n </" . $closeToken . ">";
+        }
+        close(XMLFILE);
+
+        open( XMLFILE,  $ARGV[3] );
+        open( XMLFILE1, ">myxml.xml" );
+        while (<XMLFILE>) {
+            $lineToProcess = $_;
+            chomp($lineToProcess);
+            if ( $lineToProcess =~ m/\"$/ ) {
+                $lineToProcess =~ s/>//g;
+                $lineToProcess .= ">";
+            }
+            print XMLFILE1 $lineToProcess . "\n";
+        }
+        close(XMLFILE);
+        unlink( $ARGV[3] );
+        rename( "myxml.xml", $ARGV[3] );
+    }
+    system( "python XMLValidator.py " . $ARGV[3] . " " . $ARGV[5] . "" );
+}
